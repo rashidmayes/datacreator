@@ -9,7 +9,7 @@ java -jar DataCreator-1.0.0-jar-with-dependencies.jar ../sample.json
 
 Config JSON sample.json
 
-``json
+```json
 
 {
 	"host" : "127.0.0.1",
@@ -30,11 +30,11 @@ Config JSON sample.json
 	}
 }
 
-``
+```
 
 Outputs:
 
-``
+```
 -- Counters --------------------------------------------------------------------
 records.network
              count = 1980
@@ -74,10 +74,10 @@ Min Latency: 0.231 ms
 Max Latency: 2.375 ms
 Records/Second: 860.062
 
-``
+```
 And creates:
 
-``
+```
 aql> select * From test.sample
 +-----------+--------------+-----+
 | firstname | lastname     | age |
@@ -94,4 +94,4 @@ aql> select * From test.sample
 | "UMXRd"   | "B0Pm8HQmF8" | 73  |
 +-----------+--------------+-----+
 10 rows in set (0.068 secs)
-``
+```
