@@ -2,8 +2,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerospike</groupId>
-	<artifactId>DataCreator</artifactId>
-	<version>1.0.0</version>
+	<artifactId>DataCreatorCS</artifactId>
+	<version>2.0.0</version>
 	<name>Generic Data Creator</name>
 
 	<repositories>
@@ -119,8 +119,14 @@
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
-
-
+        
+		<!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+		<dependency>
+		    <groupId>io.netty</groupId>
+		    <artifactId>netty-all</artifactId>
+		    <version>4.1.6.Final</version>
+		</dependency>
+     		
 	</dependencies>
 
 	<build>

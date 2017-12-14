@@ -8,9 +8,9 @@ import com.aerospike.pub.dc.keygen.LongAdderSequentialKeyGenerator;
 
 public class Config {
 	
-	public enum Type { GEOSPATIAL, STRING, INT, DOUBLE, BLOB, LIST, MAP }
+	public enum Type { GEOSPATIAL, STRING, INT, DOUBLE, BLOB, LIST, MAP, IP, IPPORT, UUID, DELIMITED_STRING, BOOLEAN }
 	
-	static class Write {
+	public static class Write {
 		public String namespace = "test";
 		public String set = "csd";
 		public int threads = 1;	
@@ -20,22 +20,29 @@ public class Config {
 		public String keyGenerator = LongAdderSequentialKeyGenerator.class.getName();
 		public double rateLimit = 0;
 		public boolean sameRecordDifferentKey;
+		public BinSpec[] binSpecs;
+	}
+	
+	
+	public static class BinSpec {
 		public Map<String, Bin> bins;
 	}
 		
 	public static class Bin {
 		public Type type;
-		public int size;
+		public long size;
 		public Type keyType;
 		public int keyLength;
 		public Type elementType;
 		public int elementLength;
+		public String mask;
 	}
-	
-	private static AerospikeClient mClient = null;
+
+	private AerospikeClient mClient = null;
 	
 	public ClientPolicy clientPolicy;
 	public String host = "127.0.0.1";
+	public String[] hosts = {};
 	public int port = 3000;
 	
 	public long duration = Long.MAX_VALUE;

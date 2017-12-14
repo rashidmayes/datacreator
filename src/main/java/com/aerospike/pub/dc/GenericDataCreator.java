@@ -35,21 +35,23 @@ public class GenericDataCreator {
 	
 	public static void main(String[] args) throws ParseException {
 		
-		String fileName = ( args.length == 0 ) ? "load.json" : args[0];
+		String fileName = ( args.length == 0 ) ? "sample.json" : args[0];
+		String sPrefix = ( args.length == 2 ) ? args[1] : "a";
+		
+	
 		File file = new File(fileName);
 		if ( !file.canRead() ) {
 			System.err.println("Unable to read " + file.getAbsolutePath());
 			System.exit(0);
 		}
 		
-		try {
-			
+		try {			
 			ObjectMapper objectMapper = new ObjectMapper();
-			Config config = objectMapper.readValue(file, Config.class);
-			
 			ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
-			System.out.println(objectWriter.writeValueAsString(config));
 			
+			Config config = objectMapper.readValue(file, Config.class);
+			//System.out.println(objectWriter.writeValueAsString(config));
+		
 			final ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics)
 					.convertRatesTo(TimeUnit.SECONDS)
 					.convertDurationsTo(TimeUnit.MILLISECONDS).build();
@@ -88,11 +90,12 @@ public class GenericDataCreator {
 				}
 			}
 
-			
 			ThreadGroup threadGroup = new ThreadGroup("writers");
 			long start = System.currentTimeMillis();
 			
-			SAVED_RECORD_TIMES = metrics.timer("records.saved.times");
+			SAVED_RECORD_TIMES = new Timer(new com.codahale.metrics.UniformReservoir());
+			metrics.register(sPrefix + ".records.saved.times", SAVED_RECORD_TIMES);
+			
 			for (Writer w : writers) {
 				new Thread(threadGroup, w).start();	
 			}
@@ -142,5 +145,7 @@ public class GenericDataCreator {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		System.exit(0);
 	}
 }

@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -15,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Bin;
+import com.aerospike.pub.dc.Config.BinSpec;
 import com.aerospike.pub.dc.Config.Write;
 import com.aerospike.pub.dc.keygen.KeyGenerator;
 import com.codahale.metrics.Timer.Context;
@@ -38,7 +40,7 @@ public class Writer implements Runnable {
 	
 	//change to LongAdder if exact count is needed
 	//private static long count = 0;
-	private static LongAdder counter = new LongAdder();
+	static LongAdder counter = new LongAdder();
 	Gson gson = new GsonBuilder().create();
 	
 	public Writer(KeyGenerator keyGenerator, Config config, Semaphore completed) {
@@ -109,6 +111,9 @@ public class Writer implements Runnable {
 	
 	private RecordTemplate generate() {
 		
+		int ord = RandomUtils.nextInt(0, mWrite.binSpecs.length);
+		BinSpec binSpec = mWrite.binSpecs[ord];
+		
 		if ( mConfig.write.sameRecordDifferentKey ) {
 			
 			if ( recordTemplate != null ) {
@@ -119,7 +124,7 @@ public class Writer implements Runnable {
 		
 		recordTemplate = new RecordTemplate();
 		recordTemplate.key = mKeyGenerator.generate(mConfig.name, mWrite.keyLength, mWrite.namespace, mWrite.set);
-		recordTemplate.bins = new Bin[mWrite.bins.size()];
+		recordTemplate.bins = new Bin[binSpec.bins.size()];
 		recordTemplate.estimatedSize += 28 * recordTemplate.bins.length;
 		
 		if ( mWrite.set != null ) {
@@ -129,7 +134,7 @@ public class Writer implements Runnable {
 		Config.Bin binConfig;
 		Config.Type type;
 		int i = 0;
-		for (Entry<String, Config.Bin> entry : mWrite.bins.entrySet() ) {
+		for (Entry<String, Config.Bin> entry : binSpec.bins.entrySet() ) {
 			binConfig = entry.getValue();
 			type = binConfig.type;
 			
@@ -143,25 +148,41 @@ public class Writer implements Runnable {
 				recordTemplate.estimatedSize += 5 + binConfig.size;
 				break;
 			case STRING:
-				recordTemplate.bins[i] = new Bin(entry.getKey(), RandomStringUtils.randomAlphanumeric(binConfig.size));
+				recordTemplate.bins[i] = new Bin(entry.getKey(), RandomStringUtils.randomAlphanumeric((int)binConfig.size));
 				recordTemplate.estimatedSize += 5 + binConfig.size;
 				break;
 			case BLOB:
-				recordTemplate.bins[i] = new Bin(entry.getKey(), RandomUtils.nextBytes(binConfig.size));
+				recordTemplate.bins[i] = new Bin(entry.getKey(), RandomUtils.nextBytes((int)binConfig.size));
 				recordTemplate.estimatedSize += 5 + binConfig.size;
 				break;
 				
 			//list, maps, geo not in original design, needs testing, estimates not accurate
 			case LIST: //change to msgpack
 				if ( Config.Type.STRING == binConfig.elementType ) {
-					ArrayList<String> list = new ArrayList<String>(binConfig.size);
+					ArrayList<String> list = new ArrayList<String>((int)binConfig.size);
 					for ( int index = 0; index < binConfig.size ; index++ ) {
 						list.add(RandomStringUtils.randomAlphanumeric(binConfig.elementLength));
 					}
 					recordTemplate.bins[i] = new Bin(entry.getKey(), list);
 					recordTemplate.estimatedSize += 10 + (binConfig.size * binConfig.elementLength); //change to msg pack est.
+				} else if ( Config.Type.MAP == binConfig.elementType ) {
+					
+					HashMap<String,String> map;
+					ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String,String>>((int)binConfig.size);
+					for ( int index = 0; index < binConfig.size ; index++ ) {
+						
+						map = new HashMap<String,String>();
+						map.put(RandomStringUtils.randomAlphanumeric(binConfig.keyLength), 
+								RandomStringUtils.randomAlphanumeric(binConfig.elementLength));
+						
+						list.add(map);
+					}
+					recordTemplate.bins[i] = new Bin(entry.getKey(), list);
+					recordTemplate.estimatedSize += 10 + (binConfig.size * binConfig.elementLength); //change to msg pack est.
+					
+					
 				} else {
-					ArrayList<Long> list = new ArrayList<Long>(binConfig.size);
+					ArrayList<Long> list = new ArrayList<Long>((int)binConfig.size);
 					for ( int index = 0; index < binConfig.size ; index++ ) {
 						list.add(RandomUtils.nextLong(0,binConfig.elementLength));
 					}
@@ -224,6 +245,58 @@ public class Writer implements Runnable {
 				recordTemplate.bins[i] = Bin.asGeoJSON(entry.getKey(), json);
 				recordTemplate.estimatedSize += 12 + json.length();
 				break;
+			case IP:
+				long size = binConfig.size;
+				if ( size < 0 ) {
+					size = 4294967295L;
+				}
+				long numericIp = RandomUtils.nextLong(0, Math.min(size,4294967295L));
+			    String ip = String.format("%d.%d.%d.%d", (numericIp >> 24) & 0xFF, (numericIp >> 16) & 0xFF, (numericIp >> 8) & 0xFF, numericIp & 0xFF );   
+				
+				recordTemplate.bins[i] = new Bin(entry.getKey(), ip);
+				recordTemplate.estimatedSize += 5 + ip.length();
+				break;
+				
+			case IPPORT:
+				size = binConfig.size;
+				if ( size < 0 ) {
+					size = 4294967295L;
+				}
+				numericIp = RandomUtils.nextLong(0, Math.min(size,4294967295L));
+			    ip = String.format("%d.%d.%d.%d:%d", (numericIp >> 24) & 0xFF, (numericIp >> 16) & 0xFF, (numericIp >> 8) & 0xFF, numericIp & 0xFF, RandomUtils.nextInt(0, 10) );   
+				
+				recordTemplate.bins[i] = new Bin(entry.getKey(), ip);
+				recordTemplate.estimatedSize += 5 + ip.length();
+				break;	
+
+			case UUID:
+
+			    String uid = UUID.randomUUID().toString();   
+				
+				recordTemplate.bins[i] = new Bin(entry.getKey(), uid);
+				recordTemplate.estimatedSize += 5 + uid.length();
+				break;
+				
+			case DELIMITED_STRING:
+				String mask = ( binConfig.mask == null ) ? ",%s" : binConfig.mask;
+				
+			    StringBuffer buffer = new StringBuffer();
+				
+				if ( Config.Type.STRING == binConfig.elementType ) {
+					for ( int index = 0; index < binConfig.size ; index++ ) {
+						buffer.append(String.format(mask, RandomStringUtils.randomAlphabetic(binConfig.elementLength).toLowerCase()));
+					}
+				} else {
+					for ( int index = 0; index < binConfig.size ; index++ ) {
+						buffer.append(String.format(mask, RandomUtils.nextLong(0,binConfig.elementLength)));
+					}
+				}
+				
+				String data = buffer.substring(1);
+				recordTemplate.bins[i] = new Bin(entry.getKey(), data);
+				recordTemplate.estimatedSize += 5 + data.length();
+				
+				break;				
 				
 			default:
 				break;

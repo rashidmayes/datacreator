@@ -1,0 +1,37 @@
+{
+	"host" : "127.0.0.1",
+	"port" : 3000,
+
+	"clientPolicy" : {
+	  	"writePolicyDefault" : {
+	  		"commitLevel" : "COMMIT_ALL",
+	  		"recordExistsAction" : "REPLACE"
+	  	}
+	},
+		  
+	"reportInterval" : 2,
+	"duration" : 10,
+
+	"write" : {
+		  "sameRecordDifferentKey" : false,
+		  "rateLimit" : 30000000,
+		  "namespace" : "test",
+		  "set" : "employees",
+		  "threads" : 2,
+		  "preGenerate" : 0,
+		  "limit" : 1000,	  
+		  "keyGenerator" : "com.aerospike.pub.dc.keygen.LongAdderSequentialKeyGenerator",
+		  "keyLength" : 16,
+		  
+		  "binSpecs" : [
+		 		{
+		 		  "bins" : {
+		 		  	"firstname" : { "type" : "STRING", "size" : 8 },
+				  	"lastname" : { "type" : "STRING", "size" : 10 },
+				  	"age" : { "type" : "INT", "size" : 100 }
+				  }
+				} 
+		  ] 
+		 
+	}
+}
