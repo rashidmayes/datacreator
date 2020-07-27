@@ -21,6 +21,7 @@ public class Config {
 		public double rateLimit = 0;
 		public boolean sameRecordDifferentKey;
 		public BinSpec[] binSpecs;
+		public boolean useOperations;
 	}
 	
 	
@@ -49,6 +50,7 @@ public class Config {
 	public int reportInterval = 2;	
 	public String name;
 	public Write write;
+
 
 	public AerospikeClient getClient() {
 		if ( mClient == null || !mClient.isConnected() ) {

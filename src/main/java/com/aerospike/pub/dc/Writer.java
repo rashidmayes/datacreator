@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
@@ -15,7 +17,13 @@ import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.aerospike.client.AerospikeClient;
+import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
+import com.aerospike.client.Operation;
+import com.aerospike.client.Value;
+import com.aerospike.client.cdt.MapOrder;
+import com.aerospike.client.cdt.MapPolicy;
+import com.aerospike.client.cdt.MapWriteMode;
 import com.aerospike.pub.dc.Config.BinSpec;
 import com.aerospike.pub.dc.Config.Write;
 import com.aerospike.pub.dc.keygen.KeyGenerator;
@@ -42,6 +50,9 @@ public class Writer implements Runnable {
 	//private static long count = 0;
 	static LongAdder counter = new LongAdder();
 	Gson gson = new GsonBuilder().create();
+	Random mRandom = new Random();
+	MapPolicy mMapPolicy;
+	boolean mOrderedMaps;
 	
 	public Writer(KeyGenerator keyGenerator, Config config, Semaphore completed) {
 		this.mConfig = config;
@@ -49,6 +60,8 @@ public class Writer implements Runnable {
 		this.mKeyGenerator = keyGenerator;
 		this.mCompleted = completed;
 		this.mClient = config.getClient();
+		this.mMapPolicy = new MapPolicy(MapOrder.KEY_VALUE_ORDERED, MapWriteMode.UPDATE);
+		this.mOrderedMaps = true;
 		
 		if ( StringUtils.isEmpty(config.write.set) ) {
 			SimpleDateFormat sdf = new SimpleDateFormat("'GEN'yyyy-dd-MM_HH_mm_ss");
@@ -72,8 +85,7 @@ public class Writer implements Runnable {
 
 		try {
 			RecordTemplate template;
-			
-			Context context = null;
+
 			while (!mCancel && counter.longValue() < mWrite.limit) {
 				counter.increment();
 				if ( mRateLimiter != null ) {
@@ -89,13 +101,28 @@ public class Writer implements Runnable {
 					}
 				}
 				
-				try {
-					context = GenericDataCreator.SAVED_RECORD_TIMES.time();
-					mClient.put(null, template.key, template.bins);
-				} finally {
-					if ( context != null ) {
-						context.close();
+				try {					
+					if ( mWrite.useOperations ) {
+						
+						Operation[] ops = template.getOps(mMapPolicy);					
+						try (Context context = GenericDataCreator.SAVED_RECORD_TIMES.time()) {
+							mClient.operate(null, template.key, ops);
+						}
+						
+					} else {
+						
+						try (Context context = GenericDataCreator.SAVED_RECORD_TIMES.time()) {
+							mClient.put(null, template.key, template.bins);
+						}
 					}
+					
+				} catch (AerospikeException ae) {
+					ae.printStackTrace();
+					if ( ae.getResultCode() != 8 ) {
+						break;
+					}
+					
+				} finally {
 					GenericDataCreator.NETWORK.inc(template.estimatedSize);
 					GenericDataCreator.STORAGE.inc(template.dataSize);
 				}
@@ -193,37 +220,39 @@ public class Writer implements Runnable {
 			case MAP: //change to msgpack
 				
 				if ( binConfig.keyType == Config.Type.STRING ) {
+					Map<Value,Value> map = new HashMap<Value,Value>();
 					if ( binConfig.elementType == Config.Type.STRING ) {
-						HashMap<String,String> map = new HashMap<String,String>();
+
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(RandomStringUtils.randomAlphanumeric(binConfig.keyLength), 
-									RandomStringUtils.randomAlphanumeric(binConfig.elementLength));
+							map.put(Value.get(RandomStringUtils.randomAlphanumeric(binConfig.keyLength)), 
+									Value.get(RandomStringUtils.randomAlphanumeric(binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
 						recordTemplate.estimatedSize += 2 + (binConfig.keyLength + binConfig.elementLength) * binConfig.size;
 					} else {
-						HashMap<String,Long> map = new HashMap<String,Long>();
+
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(RandomStringUtils.randomAlphanumeric(binConfig.keyLength), 
-									RandomUtils.nextLong(0, binConfig.elementLength));
+							map.put(Value.get(RandomStringUtils.randomAlphanumeric(binConfig.keyLength)), 
+									Value.get(RandomUtils.nextLong(0, binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
 						recordTemplate.estimatedSize += 2 + (binConfig.keyLength + 8) * binConfig.size;
 					}
 				} else {
-					if ( binConfig.elementType == Config.Type.INT ) {
-						HashMap<Long,String> map = new HashMap<Long,String>();
+					Map<Value,Value> map = new HashMap<Value,Value>();
+					if ( binConfig.elementType == Config.Type.STRING ) {
+
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(RandomUtils.nextLong(0,binConfig.keyLength), 
-									RandomStringUtils.randomAlphanumeric(binConfig.elementLength));
+							map.put(Value.get(RandomUtils.nextLong(0,binConfig.keyLength)), 
+									Value.get(RandomStringUtils.randomAlphanumeric(binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
 						recordTemplate.estimatedSize += 2 + (binConfig.keyLength + binConfig.elementLength) * binConfig.size;
 					} else {
-						HashMap<Long,Long> map = new HashMap<Long,Long>();
+
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(RandomUtils.nextLong(0,binConfig.keyLength), 
-									RandomUtils.nextLong(0, binConfig.elementLength));
+							map.put(Value.get(RandomUtils.nextLong(0,binConfig.keyLength)), 
+									Value.get(RandomUtils.nextLong(0, binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
 						recordTemplate.estimatedSize += 2 + (8 + 8) * binConfig.size;
@@ -280,7 +309,7 @@ public class Writer implements Runnable {
 			case DELIMITED_STRING:
 				String mask = ( binConfig.mask == null ) ? ",%s" : binConfig.mask;
 				
-			    StringBuffer buffer = new StringBuffer();
+			    StringBuilder buffer = new StringBuilder();
 				
 				if ( Config.Type.STRING == binConfig.elementType ) {
 					for ( int index = 0; index < binConfig.size ; index++ ) {

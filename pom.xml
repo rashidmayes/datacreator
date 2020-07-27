@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aerospike</groupId>
@@ -16,9 +17,9 @@
 	<dependencies>
 
 		<dependency>
-			<groupId>com.github.aerospike</groupId>
-			<artifactId>aerospike-client-java</artifactId>
-			<version>3.3.0</version>
+			<groupId>com.aerospike</groupId>
+			<artifactId>aerospike-client</artifactId>
+			<version>4.4.15</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
@@ -28,7 +29,21 @@
 			<version>3.4</version>
 		</dependency>
 
-
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-core</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-events</artifactId>
+			<version>2.2.7</version>
+		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-lambda-java-log4j2</artifactId>
+			<version>1.1.0</version>
+		</dependency>
 
 		<!-- Apache command line parser. -->
 		<dependency>
@@ -63,40 +78,39 @@
 			<version>2.7</version>
 		</dependency>
 
-		<!-- http://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core -->
+		<!-- https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-core -->
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-core</artifactId>
-			<version>3.1.2</version>
+			<version>4.1.11</version>
 		</dependency>
 
-		<!-- http://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-graphite -->
+		<!-- https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-jvm -->
+		<dependency>
+			<groupId>io.dropwizard.metrics</groupId>
+			<artifactId>metrics-jvm</artifactId>
+			<version>4.1.11</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-graphite -->
 		<dependency>
 			<groupId>io.dropwizard.metrics</groupId>
 			<artifactId>metrics-graphite</artifactId>
-			<version>3.1.2</version>
+			<version>4.1.11</version>
 		</dependency>
 
-		<!-- http://mvnrepository.com/artifact/io.dropwizard.metrics/metrics-healthchecks -->
-		<dependency>
-			<groupId>io.dropwizard.metrics</groupId>
-			<artifactId>metrics-healthchecks</artifactId>
-			<version>3.1.2</version>
-		</dependency>
-
-		<!-- http://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>2.7.4</version>
-		</dependency>
-
-
-		<!-- http://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-core</artifactId>
-			<version>2.7.4</version>
+			<version>2.11.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.11.1</version>
 		</dependency>
 
 
@@ -104,7 +118,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-smile</artifactId>
-			<version>2.7.4</version>
+			<version>2.11.1</version>
 		</dependency>
 
 		<!-- http://mvnrepository.com/artifact/joda-time/joda-time -->
@@ -117,16 +131,16 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>18.0</version>
+			<version>29.0-jre</version>
 		</dependency>
-        
+
 		<!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
 		<dependency>
-		    <groupId>io.netty</groupId>
-		    <artifactId>netty-all</artifactId>
-		    <version>4.1.6.Final</version>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+			<version>4.1.6.Final</version>
 		</dependency>
-     		
+
 	</dependencies>
 
 	<build>

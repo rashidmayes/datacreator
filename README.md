@@ -14,22 +14,78 @@ Config JSON sample.json
 {
 	"host" : "127.0.0.1",
 	"port" : 3000,
-	"duration" : 1,
+	
+	"clientPolicy" : {
+	  	"writePolicyDefault" : {
+	  		"commitLevel" : "COMMIT_ALL"
+	  	}
+	},	
+	
+	"reportInterval": 5,
+	"duration" : 60,
 
 	"write" : {
+		  "sameRecordDifferentKey" : false,
+		  "rateLimit" : 0,
 		  "namespace" : "test",
-		  "set" : "sample",
+		  "set" : "myset",
 		  "threads" : 1,
-		  "limit" : 10,
+		  "preGenerate" : 10,
+		  "limit" : 1,	  
+		  "keyGenerator" : "com.aerospike.pub.dc.keygen.LongAdderSequentialKeyGenerator",
+		  "keyLength" : 15,
+		  "useOperations": true,
 		  
-		  "bins" :  {
-		  	"firstname" : { "type" : "STRING", "size" : 5 },
-		  	"lastname" : { "type" : "STRING", "size" : 10 },
-		  	"age" : { "type" : "INT", "size" : 84 }
-		  }  
+		  "binSpecs" : [
+		 		{
+		 		  "bins" : {
+		 		  
+		 		  	"string" : { "type" : "STRING", "size" : 8 },
+				  	"blob" : { "type" : "BLOB", "size" : 15 },
+				  	"geo" : { "type" : "GEOSPATIAL", "size" : 10 },
+				  	"ip" : { "type" : "IP", "size" : 20 },
+				  	"ipport" : { "type" : "IPPORT", "size" : 100 },
+				  	"uuid" : { "type" : "UUID", "size" : 300 },
+				  	"delemited" : { 
+				  		"type" : "DELIMITED_STRING", 
+				  		"size" : 5,
+				  		"elementType" : "STRING",
+				  		"elementLength" : 3,
+				  		"mask" : "|%s"
+				  	},		 		  
+		 		  
+		 		  
+		 		  	"list" : { 
+		 		  		"type" : "LIST", 
+		 		  		"size" : 5,
+		 		  		"keyLength": 10,
+		 		  		"elementType" : "INT",
+		 		  		"elementLength": 10
+		 		 	},
+		 		  
+		 		  	"listofmaps" : { 
+		 		  		"type" : "LIST", 
+		 		  		"size" : 5,
+		 		  		"keyLength": 10,
+		 		  		"elementType" : "MAP",
+		 		  		"elementLength": 10
+		 		 	},		 		  
+		 		  
+		 		  
+		 		  	"map" : { 
+		 		  		"type" : "MAP", 
+		 		  		"size" : 5, 
+		 		  		"keyType": "STRING",
+		 		  		"keyLength": 5,
+		 		  		"elementType" : "INT",
+		 		  		"elementLength": 5
+		 		 	}
+				  }
+				} 
+		  ] 
+		 
 	}
 }
-
 ```
 
 Outputs:
@@ -78,20 +134,58 @@ Records/Second: 860.062
 And creates:
 
 ```
-aql> select * From test.sample
-+-----------+--------------+-----+
-| firstname | lastname     | age |
-+-----------+--------------+-----+
-| "2BmDz"   | "RTbUTWsz55" | 45  |
-| "jpXg4"   | "JARb16mO68" | 60  |
-| "jiTw0"   | "Qjax1RvAf3" | 7   |
-| "u0wLI"   | "BMENi3T4ej" | 33  |
-| "Wy6aF"   | "hHgMZgdFID" | 36  |
-| "KyBKy"   | "B7nHCMIADn" | 41  |
-| "hdnYr"   | "KHDjuEfVxC" | 34  |
-| "6WBht"   | "Bb1gxlioMA" | 72  |
-| "XFWgM"   | "FRP0yrYe1T" | 41  |
-| "UMXRd"   | "B0Pm8HQmF8" | 73  |
-+-----------+--------------+-----+
-10 rows in set (0.068 secs)
+aql> set output json
+OUTPUT = JSON
+aql> select * from test.datatypes
+
+[
+    [
+        {
+          "string": "FBO1c7eI",
+          "blob": "CA F2 B9 E7 38 AE 72 0B 9A D9 B4 90 3A DD 55",
+          "geo": "\"{\"type\":\"Point\",\"coordinates\":[-4.758521540930496,-7.720478886124124]}\"",
+          "ip": "0.0.0.6",
+          "ipport": "0.0.0.63:9",
+          "uuid": "949b54ff-8e76-412b-af41-a2b9b9194fa8",
+          "delemited": "iap|cyu|lni|swt|eyc",
+          "list": [
+            1,
+            5,
+            9,
+            9,
+            4
+          ],
+          "listofmaps": [
+            {
+              "YNU2bGBXXx": "bDfpM0ON0W"
+            },
+            {
+              "QMM8yL08Sz": "NGCHLWIQK3"
+            },
+            {
+              "pWmdX6dxuE": "ZI5Tac2IwP"
+            },
+            {
+              "ctIL8AYQzF": "eZuEOvkTLW"
+            },
+            {
+              "cLlFo7Rs2d": "LZ87TKhxMM"
+            }
+          ],
+          "map": {
+            "vzGbB": 1,
+            "n2HQq": 4,
+            "TTdos": 1,
+            "kWu00": 1,
+            "XDfWx": 1
+          }
+        }
+    ],
+    [
+        {
+          "Status": 0
+        }
+    ]
+]
+
 ```
