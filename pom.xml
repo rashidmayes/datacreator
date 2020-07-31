@@ -2,7 +2,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.aerospike</groupId>
+	<groupId>com.rashidmayes.pub.dc</groupId>
 	<artifactId>DataCreatorCS</artifactId>
 	<version>2.0.0</version>
 	<name>Generic Data Creator</name>
@@ -161,7 +161,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.aerospike.pub.dc.GenericDataCreator</mainClass>
+							<mainClass>com.rashidmayes.pub.dc.GenericDataCreator</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -175,7 +175,7 @@
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<mainClass>com.aerospike.pub.dc.GenericDataCreator</mainClass>
+							<mainClass>com.rashidmayes.pub.dc.GenericDataCreator</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
