@@ -224,7 +224,7 @@ public class Writer implements Runnable {
 					if ( binConfig.elementType == Config.Type.STRING ) {
 
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(Value.get(RandomStringUtils.randomAlphanumeric(binConfig.keyLength)), 
+							map.put(Value.get(RandomStringUtils.randomAlphabetic(binConfig.keyLength)), 
 									Value.get(RandomStringUtils.randomAlphanumeric(binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
@@ -232,7 +232,7 @@ public class Writer implements Runnable {
 					} else {
 
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(Value.get(RandomStringUtils.randomAlphanumeric(binConfig.keyLength)), 
+							map.put(Value.get(RandomStringUtils.randomAlphabetic(binConfig.keyLength)), 
 									Value.get(RandomUtils.nextLong(0, binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
@@ -243,7 +243,7 @@ public class Writer implements Runnable {
 					if ( binConfig.elementType == Config.Type.STRING ) {
 
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(Value.get(RandomUtils.nextLong(0,binConfig.keyLength)), 
+							map.put(Value.get(String.valueOf(kp)), 
 									Value.get(RandomStringUtils.randomAlphanumeric(binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);
@@ -251,7 +251,7 @@ public class Writer implements Runnable {
 					} else {
 
 						for ( int kp = 0; kp < binConfig.size; kp++ ) {
-							map.put(Value.get(RandomUtils.nextLong(0,binConfig.keyLength)), 
+							map.put(Value.get(String.valueOf(kp)), 
 									Value.get(RandomUtils.nextLong(0, binConfig.elementLength)));
 						}
 						recordTemplate.bins[i] = new Bin(entry.getKey(), map);

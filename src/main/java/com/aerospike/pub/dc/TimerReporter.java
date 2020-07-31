@@ -66,7 +66,7 @@ public class TimerReporter implements Runnable {
 				, "max"
 				, "mean"
 				
-				//, "stddev"
+
 				, "median"
 				
 				, "75%"
@@ -100,8 +100,7 @@ public class TimerReporter implements Runnable {
 					, numberFormat.format(snapshot.getMin()/1000000f)
 					, numberFormat.format(snapshot.getMax()/1000000f)					
 					, numberFormat.format(snapshot.getMean()/1000000f)
-
-					//, numberFormat.format(snapshot.getStdDev()/1000000f)					
+		
 					, numberFormat.format(snapshot.getMedian()/1000000f)
 					
 					, numberFormat.format(snapshot.get75thPercentile()/1000000f)					
