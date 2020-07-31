@@ -51,7 +51,7 @@ public class GenericDataCreator {
 	
 		File file = new File(fileName);
 		if ( !file.canRead() ) {
-			System.err.println("Unable to read " + file.getAbsolutePath());
+			System.err.println("Unable to read " + file.getPath());
 			System.exit(0);
 		}
 		
