@@ -30,13 +30,8 @@ jobs:
 
     - name: Build with Maven
       run: mvn -B package --file pom.xml
-    - run: mkdir staging && cp target/*.jar staging
+    - run: mkdir builds && cp target/*.jar builds
     - uses: actions/upload-artifact@v2
       with:
         name: Package
-        path: staging    
-
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+        path: builds
