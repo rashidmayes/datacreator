@@ -45,7 +45,7 @@ public class GenericDataCreator {
 	
 	public static void main(String[] args) throws ParseException {
 		
-		String fileName = ( args.length == 0 ) ? "sample.json" : args[0];
+		String fileName = ( args.length == 0 ) ? "examples/employees.json" : args[0];
 		String sPrefix = ( args.length == 2 ) ? args[1] : "a";
 		
 	

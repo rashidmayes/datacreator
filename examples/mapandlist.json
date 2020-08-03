@@ -1,0 +1,61 @@
+{
+	"host" : "127.0.0.1",
+	"port" : 3000,
+	
+	"clientPolicy" : {
+	  	"writePolicyDefault" : {
+	  		"commitLevel" : "COMMIT_ALL",
+	  		"timeout": 60000
+	  	}
+	},	
+	
+	"reportInterval": 5,
+	"duration" : 60,
+
+	"write" : {
+		  "sameRecordDifferentKey" : false,
+		  "rateLimit" : 0,
+		  "namespace" : "test",
+		  "set" : "mapandlist",
+		  "threads" : 1,
+		  "preGenerate" : 5,
+		  "limit" : 5,	  
+		  "keyGenerator" : "com.rashidmayes.pub.dc.keygen.SequentialKeyGenerator",
+		  "keyLength" : 15,
+		  "useOperations": true,
+		  
+		  "binSpecs" : [
+		 		{
+		 		  "bins" : {
+		 		  		 		  
+		 		  	"list" : { 
+		 		  		"type" : "LIST", 
+		 		  		"size" : 5,
+		 		  		"keyLength": 10,
+		 		  		"elementType" : "INT",
+		 		  		"elementLength": 10
+		 		 	},
+		 		  
+		 		  	"listofmaps" : { 
+		 		  		"type" : "LIST", 
+		 		  		"size" : 5,
+		 		  		"keyLength": 10,
+		 		  		"elementType" : "MAP",
+		 		  		"elementLength": 10
+		 		 	},		 		  
+		 		  
+		 		  
+		 		  	"map" : { 
+		 		  		"type" : "MAP", 
+		 		  		"size" : 5, 
+		 		  		"keyType": "STRING",
+		 		  		"keyLength": 5,
+		 		  		"elementType" : "INT",
+		 		  		"elementLength": 5
+		 		 	}
+				  }
+				} 
+		  ] 
+		 
+	}
+}

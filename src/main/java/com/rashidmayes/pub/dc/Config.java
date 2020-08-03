@@ -7,9 +7,7 @@ import com.aerospike.client.policy.ClientPolicy;
 import com.rashidmayes.pub.dc.keygen.LongAdderSequentialKeyGenerator;
 
 public class Config {
-	
-	public enum Type { GEOSPATIAL, STRING, INT, DOUBLE, BLOB, LIST, MAP, IP, IPPORT, UUID, DELIMITED_STRING, BOOLEAN }
-	
+
 	public static class Write {
 		public String namespace = "test";
 		public String set = "csd";
@@ -30,11 +28,11 @@ public class Config {
 	}
 		
 	public static class Bin {
-		public Type type;
+		public DataType type;
 		public long size;
-		public Type keyType;
+		public DataType keyType;
 		public int keyLength;
-		public Type elementType;
+		public DataType elementType;
 		public int elementLength;
 		public String mask;
 	}

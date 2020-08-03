@@ -91,17 +91,6 @@ Config JSON sample.json
 Outputs:
 
 ```
--- Counters --------------------------------------------------------------------
-records.network
-             count = 1980
-records.pregenerated
-             count = 0
-records.storage
-             count = 2560
-records.waittime
-             count = 0
-
--- Timers ----------------------------------------------------------------------
 records.saved.times
              count = 10
          mean rate = 577.49 calls/second
@@ -189,3 +178,24 @@ aql> select * from test.datatypes
 ]
 
 ```
+
+Please see the examples folder for more sample configurations.
+
+##Key Generators
+
+
+Key Generators generate the keys which are used for each record. 
+
+| Name | Description | Examples |
+|------|-------------|----------|
+| FixedKeyGenerator | Single static key | 1 |
+| LongAdderSequentialKeyGenerator | Thread safe sequential numeric key | 0 1 2 3 4 5..n |
+| PaddedLongAdderSequentialKeyGenerator | Sequential numeric key with padding | 000 001 002 003..099..999 |
+| PrefixedSequentialKeyGenerator | Base 64 hardware address of the network adapter prepended to the system time followed by the padded key counter value | xf-az-0001 |
+| RandomKeyGenerator | Random number between 0 and key length | 73 |
+| RandomStringKeyGenerator | Random alpha-numeric string of key length size| sdf3nfg56df4liu333 |
+| SequentialKeyGenerator | non-thread safe numeric key | 1 2 3 4 5..n |
+
+
+
+

@@ -16,7 +16,7 @@
 		  "sameRecordDifferentKey" : false,
 		  "rateLimit" : 30000000,
 		  "namespace" : "test",
-		  "set" : "examples",
+		  "set" : "datatypes",
 		  "threads" : 10,
 		  "preGenerate" : 0,
 		  "limit" : 1000,	  

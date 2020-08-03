@@ -1,0 +1,43 @@
+{
+	"host" : "3.93.6.140",
+	"port" : 3000,
+
+	"clientPolicy" : {
+	  	"writePolicyDefault" : {
+	  		"commitLevel" : "COMMIT_ALL",
+	  		"recordExistsAction" : "REPLACE"
+	  	}
+	},
+		  
+	"reportInterval" : 2,
+	"duration" : 10,
+
+	"write" : {
+		  "sameRecordDifferentKey" : false,
+		  "rateLimit" : 0,
+		  "namespace" : "test",
+		  "set" : "employees",
+		  "threads" : 10,
+		  "preGenerate" : 0,
+		  "limit" : 1000,	  
+		  "keyGenerator" : "com.rashidmayes.pub.dc.keygen.SequentialKeyGenerator",
+		  "keyLength" : 16,
+		  
+		  "binSpecs" : [
+		 		{
+		 		  "bins" : {
+		 		  
+		 		  	"firstname" : { "type" : "US_FIRST_NAME", "size" : 1 },
+				  	"lastname" : { "type" : "US_LAST_NAME", "size" : 1 },				  	  	
+				  	"street" : { "type" : "US_STREET", "size" : 100 },
+				  	"city" : { "type" : "US_CITY", "size" : 1 },	
+				  	"state" : { "type" : "US_STATE", "size" : 2 },
+				  	"zip" : { "type" : "US_ZIP", "size" : 5 },
+				  	"phone" : { "type" : "US_PHONE_NUMBER", "size" : 10 }
+				  	
+				  }
+				} 
+		  ] 
+		 
+	}
+}
