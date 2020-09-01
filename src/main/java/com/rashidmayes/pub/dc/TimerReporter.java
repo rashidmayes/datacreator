@@ -7,11 +7,11 @@ import java.util.Map;
 
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
+import com.rashidmayes.pub.dc.util.SizeHelper;
 
 public class TimerReporter implements Runnable {
-		
-	public static final NumberFormat percentFormat = NumberFormat.getPercentInstance();
-	public static final NumberFormat numberFormat = NumberFormat.getNumberInstance();
+
+	private static final NumberFormat numberFormat = NumberFormat.getNumberInstance();
 
 	private static final String STAT_INFO_FORMAT = "%tT"
 			+ " %-25s"
@@ -48,7 +48,8 @@ public class TimerReporter implements Runnable {
 			+ " %15s"
 			+ " %15s\n";
 	
-	public void run() {
+	
+	public void printTimers() {
 		
 		StringBuilder infoBuffer = new StringBuilder();
 		Formatter infoFormatter = new Formatter(infoBuffer);
@@ -84,6 +85,10 @@ public class TimerReporter implements Runnable {
 		Timer timer;
 		for ( String name : timers.keySet() ) {
 			timer = timers.get(name);
+			if ( timer.getCount() == 0 ) {
+				continue;
+			}
+			
 			snapshot = timer.getSnapshot();
 			
 			infoFormatter.format(STAT_INFO_FORMAT, 
@@ -114,7 +119,51 @@ public class TimerReporter implements Runnable {
 		
 
 		infoFormatter.close();
+		infoBuffer.append("\n");
 		java.util.logging.Logger.getGlobal().info(infoBuffer.toString());
+	
+	}	
+	
+	
+	public void printCounters() {
+		
+		final StringBuilder infoBuffer = new StringBuilder();
+		Formatter infoFormatter = new Formatter(infoBuffer);
+		
+		infoFormatter.format("%n%8s"
+				+ " %-25s"
+				+ " %15s\n", 
+				""
+				, "Name"
+				, "Count");
+		
+		ZonedDateTime currentTime = ZonedDateTime.now();
+		
+		GenericDataCreator.metrics.getCounters().forEach((name, counter) -> {
+			
+			if ( counter.getCount() > 0 ) {
+				infoFormatter.format("%tT"
+						+ " %-25s"
+						+ " %15s\n", 
+						currentTime
+						, name
+						, SizeHelper.getSize(counter.getCount()));
+			}
+			
+		});
+
+
+		infoFormatter.close();
+		infoBuffer.append("\n");
+		java.util.logging.Logger.getGlobal().info(infoBuffer.toString());
+	
+	}	
+	
+	
+	public void run() {
+		
+		printTimers();
+		printCounters();
 	
 	}
 }

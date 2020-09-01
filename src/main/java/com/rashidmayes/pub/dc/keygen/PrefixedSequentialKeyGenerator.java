@@ -1,7 +1,6 @@
 package com.rashidmayes.pub.dc.keygen;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.UUID;
@@ -15,15 +14,16 @@ import gnu.crypto.util.Base64;
 
 public class PrefixedSequentialKeyGenerator implements KeyGenerator {
 	
-	public static final String format = "%s-%s";
+	private static final String format = "%s-%s";
 	
-	String prefix;
+	private String prefix;
+	private LongAdder count = new LongAdder();
 	
 	public PrefixedSequentialKeyGenerator() {
 		
 		try {
 			NetworkInterface n;
-			n = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+			//n = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
 			for ( Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();  ) {
 				n = en.nextElement();
 				if ( n.getHardwareAddress() != null ) {
@@ -48,7 +48,7 @@ public class PrefixedSequentialKeyGenerator implements KeyGenerator {
 		}
 	}
 	
-	public LongAdder count = new LongAdder();
+	
 
 	@Override
 	public Key generate(String name, int keyLength, String namespace, String set) {

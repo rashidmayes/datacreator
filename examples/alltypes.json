@@ -12,7 +12,8 @@
 	"reportInterval" : 2,
 	"duration" : 10,
 
-	"write" : {
+	"writes" : [
+		{
 		  "sameRecordDifferentKey" : false,
 		  "rateLimit" : 30000000,
 		  "namespace" : "test",
@@ -46,5 +47,6 @@
 				} 
 		  ] 
 		 
-	}
+		}
+	]
 }

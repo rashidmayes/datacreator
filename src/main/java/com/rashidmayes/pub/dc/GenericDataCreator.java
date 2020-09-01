@@ -1,18 +1,29 @@
 package com.rashidmayes.pub.dc;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 
+import com.aerospike.client.Key;
+import com.aerospike.client.Record;
 import com.aerospike.client.policy.ClientPolicy;
 import com.aerospike.client.policy.TlsPolicy;
 import com.codahale.metrics.ConsoleReporter;
@@ -24,36 +35,71 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.rashidmayes.pub.dc.Config.Write;
 import com.rashidmayes.pub.dc.keygen.KeyGenerator;
+import com.rashidmayes.pub.dc.keygen.PipedKeyGenerator;
 import com.rashidmayes.pub.dc.util.SizeHelper;
 
-public class GenericDataCreator {
+public class GenericDataCreator implements Listener {
 
 	public static final MetricRegistry metrics = new MetricRegistry();
 	
-	public static final Counter NETWORK = metrics.counter("records.network");
-	public static final Counter STORAGE = metrics.counter("records.storage");
-	public static final Counter WAIT = metrics.counter("records.waittime");
+	//change to meters
+	public static final Counter NETWORK_READ = metrics.counter("network.read");
+	public static final Counter NETWORK_WRITE = metrics.counter("network.write");
+	public static final Counter STORAGE_WRITE = metrics.counter("storage.write");
+	public static final Counter WITES = metrics.counter("writes");
+	public static final Counter READS = metrics.counter("reads");
+	public static final Counter READ_HITS = metrics.counter("reads.hits");
+	
+	
+	public static final Counter WAIT = metrics.counter("thread.waittime");
 	public static final Counter PREGENERATED = metrics.counter("records.pregenerated");
 	
-	public static final Counter WITES_SAVED = metrics.counter("writes.saved");
-	public static final Counter TRUNCATES_SAVED = metrics.counter("truncates.saved");
-	
-	public static Timer UPDATE_TIMES;
-	public static Timer SAVED_RECORD_TIMES;
 
 	
-	public static void main(String[] args) throws ParseException {
-		
-		String fileName = ( args.length == 0 ) ? "examples/employees.json" : args[0];
-		String sPrefix = ( args.length == 2 ) ? args[1] : "a";
-		
+	public static Timer SAVED_RECORD_TIMES;
+	public static Timer READ_RECORD_TIMES;
 	
-		File file = new File(fileName);
-		if ( !file.canRead() ) {
-			System.err.println("Unable to read " + file.getPath());
-			System.exit(0);
-		}
+	private Logger mLogger = Logger.getLogger(getClass().getSimpleName());
+	private String mId;
+	private KeyQueue mKeyQueue;
+	
+	GenericDataCreator() {
+	}
+	
+	public void setId(String id) {
+		this.mId = id;
+	}
+	
+	public String getId() {
+		return this.mId;
+	}
+	
+	@Override
+	public void recordWritten(Key key) {
+		mKeyQueue.put(key);
+	}
+
+
+	@Override
+	public void recordRead(Key key, Record record) {
+		mKeyQueue.put(key);
+	}
+	
+	@Override
+	public void recycle(Key key) {
+		
+	}
+
+	@Override
+	public void recordDeleted(Key key) {
+
+	}
+	
+	public void execute(File configFile) throws ParseException {
+		
+
 		
 		try {			
 			ObjectMapper objectMapper = new ObjectMapper();
@@ -64,13 +110,16 @@ public class GenericDataCreator {
 			
 			ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
 			
-			Config config = objectMapper.readValue(file, Config.class);
-			System.out.println(objectWriter.writeValueAsString(config));
+			Config config = objectMapper.readValue(configFile, Config.class);
+			mLogger.info(objectWriter.writeValueAsString(config));
 		
 			final ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics)
 					.convertRatesTo(TimeUnit.SECONDS)
 					.convertDurationsTo(TimeUnit.MILLISECONDS).build();
-			reporter.start(config.reportInterval, TimeUnit.SECONDS);
+			if (config.reportInterval > 0 ) reporter.start(config.reportInterval, TimeUnit.SECONDS);
+
+			NumberFormat percentFormat = NumberFormat.getPercentInstance();
+			percentFormat.setMaximumFractionDigits(3);
 			
 			NumberFormat numberFormat = NumberFormat.getNumberInstance();
 			numberFormat.setMaximumFractionDigits(3);
@@ -94,81 +143,117 @@ public class GenericDataCreator {
 				     .toFormatter();
 			
 			
+			
+			mKeyQueue = new KeyQueue(config.maxKeyQueueSize);
+			PipedKeyGenerator.setKeyQueue(mKeyQueue);
+			
+			
 			Semaphore completed = new Semaphore(0);
 			ArrayList<Writer> writers = new ArrayList<Writer>();
+			ArrayList<Reader> readers = new ArrayList<Reader>();
 				
-			if ( config.write != null ) {				
-				KeyGenerator keyGenerator =  (KeyGenerator)(Class.forName(config.write.keyGenerator).getConstructor().newInstance());
+			if ( config.writes != null ) {
+				for (Write write : config.writes) {
+					KeyGenerator keyGenerator = (KeyGenerator)(Class.forName(write.keyGenerator).getConstructor().newInstance());
 
-				for ( int i = 0, stop = Math.max(1, config.write.threads); i < stop; i++ ) {
-					writers.add(new Writer(keyGenerator, config, completed));
+					for ( int i = 0, stop = Math.max(1, write.threads); i < stop; i++ ) {
+						writers.add(new Writer(keyGenerator, config, write, GenericDataCreator.this, completed));
+					}
 				}
 			}
+		
+			
+			if ( config.reads != null ) {
+				Arrays.stream(config.reads).forEach(r -> {
+					try {
+						KeyGenerator keyGenerator = (KeyGenerator)(Class.forName(r.keyGenerator).getConstructor().newInstance());
 
-			ThreadGroup threadGroup = new ThreadGroup("writers");
+						for ( int i = 0, stop = Math.max(1, r.threads); i < stop; i++ ) {
+							readers.add(new Reader(keyGenerator, config, r, GenericDataCreator.this, completed));
+						}
+					} catch (Exception e) {
+						mLogger.log(Level.ALL, e.getMessage(), e);
+					}
+				});
+			}
+			
+			
+			
+			
+			
+			ThreadGroup writerThreadGroup = new ThreadGroup("writers");
+			ThreadGroup readersThreadGroup = new ThreadGroup("readers");
 			long start = System.currentTimeMillis();
 			
 			SAVED_RECORD_TIMES = new Timer(new com.codahale.metrics.UniformReservoir());
-			metrics.register(sPrefix + ".records.saved.times", SAVED_RECORD_TIMES);
+			metrics.register("\u2211 " + mId + ".writes", SAVED_RECORD_TIMES);
 			
-			UPDATE_TIMES = new Timer(new com.codahale.metrics.UniformReservoir());
-			metrics.register(sPrefix + ".users.update.times", UPDATE_TIMES);			
+			READ_RECORD_TIMES = new Timer(new com.codahale.metrics.UniformReservoir());
+			metrics.register("\u2211 " + mId + ".reads", READ_RECORD_TIMES);			
+
 			
-			for (Writer w : writers) {
-				new Thread(threadGroup, w).start();	
-			}
+			writers.forEach(r -> new Thread(writerThreadGroup, r).start());
+			readers.forEach(r -> new Thread(readersThreadGroup, r).start());
+		
 
 			Snapshot savedTimes = null;
-			Snapshot updateTimes = null;
+			Snapshot readTimes = null;
 			double writeRate = 0;
-			double updateRate = 0;
+			double readRate = 0;
 
 			
+			TimerReporter timerReporter = new TimerReporter();
 			ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 			try {
-				scheduledExecutorService.scheduleWithFixedDelay(new TimerReporter(), 0, config.reportInterval, TimeUnit.SECONDS);
-				completed.tryAcquire(writers.size(),config.duration, TimeUnit.MINUTES);
+				scheduledExecutorService.scheduleWithFixedDelay(timerReporter, 0, config.infoInterval, TimeUnit.SECONDS);
+				completed.tryAcquire(writers.size() + readers.size(),config.duration, TimeUnit.MINUTES);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				mLogger.log(Level.ALL, e.getMessage(), e);
 			} finally {
 				savedTimes = GenericDataCreator.SAVED_RECORD_TIMES.getSnapshot();
-				updateTimes = GenericDataCreator.UPDATE_TIMES.getSnapshot();
-				updateRate = GenericDataCreator.UPDATE_TIMES.getMeanRate();				
+				readTimes = GenericDataCreator.READ_RECORD_TIMES.getSnapshot();
+				readRate = GenericDataCreator.READ_RECORD_TIMES.getMeanRate();				
 				writeRate = GenericDataCreator.SAVED_RECORD_TIMES.getMeanRate();
 				reporter.close();
+				readers.forEach(r -> r.cancel());
+	        	
 	        	for ( Writer w : writers ) {
 	        		w.cancel();
 	        	}
 	        	
-	        	scheduledExecutorService.isShutdown();
+	        	scheduledExecutorService.shutdown();
+	        	scheduledExecutorService.awaitTermination(1, TimeUnit.MINUTES);
 			}
 
-			reporter.report();
+			if (config.reportInterval > 0) reporter.report();
+			timerReporter.run();
 			Period elapsed = new Period(System.currentTimeMillis()-start);
 			
 			System.out.println(
 					String.format("\n\n********** Complete **********\n"
 						+ "Duration: %s\n"
-						+ "Transfered: %s (%s)\n"
+						+ "Network Out: %s (%s)\n"
 						+ "Stored: %s (%s)\n"
-						+ "Count: %s\n"
+						+ "Write Count: %s\n"
 						+ "Avg. Latency: %s ms\n"
 						+ "Min Latency: %s ms\n"
 						+ "Max Latency: %s ms\n"
 						+ "Records/Second: %s\n"
 						
-						+ "Update Count: %s\n"
-						+ "Update Avg. Latency: %s ms\n"
-						+ "Update Min Latency: %s ms\n"
-						+ "Update Max Latency: %s ms\n"
-						+ "Update Records/Second: %s"
+						+ "Network In: %s (%s)\n"
+						+ "Read Count: %s\n"
+						+ "Read Hit Ratio: %s\n"
+						+ "Read Avg. Latency: %s ms\n"
+						+ "Read Min Latency: %s ms\n"
+						+ "Read Max Latency: %s ms\n"
+						+ "Read Records/Second: %s"
 						
 						
 						, formatter.print(elapsed)
-						, SizeHelper.getSize(GenericDataCreator.NETWORK.getCount())
-						, GenericDataCreator.NETWORK.getCount()
-						, SizeHelper.getSize(GenericDataCreator.STORAGE.getCount())
-						, GenericDataCreator.STORAGE.getCount()
+						, SizeHelper.getSize(GenericDataCreator.NETWORK_WRITE.getCount())
+						, GenericDataCreator.NETWORK_WRITE.getCount()
+						, SizeHelper.getSize(GenericDataCreator.STORAGE_WRITE.getCount())
+						, GenericDataCreator.STORAGE_WRITE.getCount()
 						
 						, GenericDataCreator.SAVED_RECORD_TIMES.getCount()
 						, numberFormat.format(savedTimes.getMean()/1000000f)
@@ -176,15 +261,60 @@ public class GenericDataCreator {
 						, numberFormat.format(savedTimes.getMax()/1000000f)
 						, numberFormat.format(writeRate)
 						
-						, GenericDataCreator.UPDATE_TIMES.getCount()
-						, numberFormat.format(updateTimes.getMean()/1000000f)
-						, numberFormat.format(updateTimes.getMin()/1000000f)
-						, numberFormat.format(updateTimes.getMax()/1000000f)
-						, numberFormat.format(updateRate)
+						, SizeHelper.getSize(GenericDataCreator.NETWORK_READ.getCount())
+						, GenericDataCreator.NETWORK_READ.getCount()
+						, GenericDataCreator.READ_RECORD_TIMES.getCount()
+						, percentFormat.format(((float) READ_HITS.getCount())/GenericDataCreator.READ_RECORD_TIMES.getCount())
+						, numberFormat.format(readTimes.getMean()/1000000f)
+						, numberFormat.format(readTimes.getMin()/1000000f)
+						, numberFormat.format(readTimes.getMax()/1000000f)
+						, numberFormat.format(readRate)
 					));
 				
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}	
+
+
+	public static void main(String[] args) throws ParseException {
+		
+		String fileName = ( args.length == 0 ) ? "examples/sample.json" : args[0];
+		
+		File configFile = new File(fileName);
+		if ( configFile.canRead() ) {
+
+			GenericDataCreator dataCreator = new GenericDataCreator();
+
+			if ( args.length == 2 ) {
+				dataCreator.setId(args[1]);
+			} else {
+			
+				try {
+					NetworkInterface.networkInterfaces()
+					.takeWhile(i ->  dataCreator.getId() == null)
+					.forEach(i -> {
+						InetAddress ia;
+						for (Enumeration<InetAddress> e = i.getInetAddresses(); e.hasMoreElements();) {
+							ia = e.nextElement();
+							if ( !ia.isLoopbackAddress() && ia instanceof Inet4Address) {
+								dataCreator.setId(ia.getHostAddress());
+								break;
+							}
+						}
+					});
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+					dataCreator.setId(RandomStringUtils.randomAlphabetic(2));
+				}
+			}
+			
+			
+			dataCreator.execute(configFile);
+			
+		} else {
+			System.err.println("Unable to read " + configFile.getPath());
+			System.exit(1);
 		}
 		
 		System.exit(0);

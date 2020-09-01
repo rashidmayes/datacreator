@@ -11,8 +11,23 @@
 		  
 	"reportInterval" : 2,
 	"duration" : 10,
+	
+	"reads" : [
+		{
+		  "id": "sequential",
+		  "rateLimit" : 0,
+		  "namespace" : "test",
+		  "set" : "examples",
+		  "threads" : 1,
+		  "limit" : 10,	  
+		  "keyGenerator" : "com.rashidmayes.pub.dc.keygen.SequentialKeyGenerator",
+		  "keyLength" : 16
+		}	
+	],
+	
 
-	"write" : {
+	"writes" : [
+		{
 		  "sameRecordDifferentKey" : false,
 		  "rateLimit" : 30000000,
 		  "namespace" : "test",
@@ -44,7 +59,7 @@
 		 		  	"maplist" : { "type" : "LIST", "size" : 10, "elementType": "MAP", "elementLength" : 10 }
 				  }
 				} 
-		  ] 
-		 
-	}
+		  ] 	 
+		}
+	]	
 }

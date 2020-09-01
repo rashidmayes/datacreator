@@ -1,8 +1,8 @@
 package com.rashidmayes.pub.dc;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,9 +96,9 @@ public enum DataType {
 					}
 					return new Bin(name, map);
 				} else {
-
+					String prefix =  Integer.toString(Thread.currentThread().getName().hashCode(),Character.MAX_RADIX) + ".";
 					for ( int kp = 0; kp < binConfig.size; kp++ ) {
-						map.put(Value.get(RandomStringUtils.randomAlphabetic(binConfig.keyLength)), 
+						map.put(Value.get(prefix + kp),  //RandomStringUtils.randomAlphabetic(binConfig.keyLength)), 
 								Value.get(RandomUtils.nextLong(0, binConfig.elementLength)));
 					}
 					return new Bin(name, map);
@@ -269,7 +269,9 @@ public enum DataType {
 		public Bin create(String name, Config.Bin binConfig) {
 			
 			Bin bin = new Bin(name,
-			String.format("%d %s %s", RandomUtils.nextLong(1,binConfig.size),getRandomDictionaryValue(), suffixes[ RandomUtils.nextInt(0,suffixes.length) ])
+			String.format("%d %s %s", 
+					RandomUtils.nextLong(1,binConfig.size),getRandomDictionaryValue(), 
+					suffixes[ RandomUtils.nextInt(0,suffixes.length) ])
 			);
 			return bin;
 		}
@@ -282,9 +284,10 @@ public enum DataType {
 	private DataType(String dictionaryPath) {
 		if ( dictionaryPath != null ) {
 			try {
-				var lines = Files.readAllLines(Path.of(DataType.class.getResource(dictionaryPath).getPath()));
-				dictionary = lines.toArray(new String[lines.size()]);
-			} catch (IOException e) {
+				
+				InputStream inputStream = DataType.class.getResourceAsStream(dictionaryPath);
+				dictionary = (String[])new BufferedReader(new InputStreamReader(inputStream)).lines().toArray(String[]::new);			
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
